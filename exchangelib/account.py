@@ -1,5 +1,5 @@
 from logging import getLogger
-
+from future.utils import raise_from
 from .autodiscover import discover
 from .credentials import DELEGATE, IMPERSONATION
 from .errors import ErrorFolderNotFound, ErrorAccessDenied
@@ -97,7 +97,7 @@ class Account:
                     if folder.is_distinguished:
                         flds.append(folder)
             if not flds:
-                raise ErrorFolderNotFound('No useable default %s folders' % fld_class.__name__) from e
+                raise_from(ErrorFolderNotFound('No useable default %s folders' % fld_class.__name__), e)
             assert len(flds) == 1, 'Multiple possible default %s folders: %s' % (
                 fld_class.__name__, [str(f) for f in flds])
             return flds[0]

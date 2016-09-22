@@ -59,7 +59,7 @@ class Email(str):
     pass
 
 
-class EWSElement:
+class EWSElement(object):
     ELEMENT_NAME = None
 
     __slots__ = tuple()
@@ -420,7 +420,7 @@ class ExternId(ExtendedProperty):
     __slots__ = ('value',)
 
     def __init__(self, extern_id):
-        super().__init__(value=extern_id)
+        super(ExternId, self).__init__(value=extern_id)
 
 
 class Attendee(EWSElement):
@@ -1261,12 +1261,12 @@ class CalendarItem(ItemMixIn):
             if field_type == Choice:
                 assert v is None or v in self.choices_for_field(k), (v, self.choices_for_field(k))
             setattr(self, k, v)
-        super().__init__(**kwargs)
+        super(CalendarItem, self).__init__(**kwargs)
 
     def to_xml(self, version):
         # WARNING: The order of addition of XML elements is VERY important. Exchange expects XML elements in a
         # specific, non-documented order and will fail with meaningless errors if the order is wrong.
-        i = super().to_xml(version=version)
+        i = super(CalendarItem, self).to_xml(version=version)
         if version.build < EXCHANGE_2010:
             i.append(create_element('t:MeetingTimeZone', TimeZoneName=self.start.tzinfo.ms_id))
         else:
@@ -1340,7 +1340,7 @@ class Message(ItemMixIn):
             if field_type == Choice:
                 assert v is None or v in self.choices_for_field(k), (v, self.choices_for_field(k))
             setattr(self, k, v)
-        super().__init__(**kwargs)
+        super(Message, self).__init__(**kwargs)
 
 
 class Messages(Folder):
@@ -1481,7 +1481,7 @@ class Task(ItemMixIn):
                 log.warning("'percent_complete' must be 0 when 'status' is '%s' (%s). Resetting",
                             self.NOT_STARTED, self.percent_complete)
                 self.percent_complete = Decimal(0)
-        super().__init__(**kwargs)
+        super(Task, self).__init__(**kwargs)
 
 
 class Tasks(Folder):
@@ -1557,7 +1557,7 @@ class Contact(ItemMixIn):
             if field_type == Choice:
                 assert v is None or v in self.choices_for_field(k), (v, self.choices_for_field(k))
             setattr(self, k, v)
-        super().__init__(**kwargs)
+        super(Contact, self).__init__(**kwargs)
 
 
 class Contacts(Folder):

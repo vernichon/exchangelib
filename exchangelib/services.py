@@ -15,6 +15,7 @@ import itertools
 from xml.parsers.expat import ExpatError
 import traceback
 
+from future.utils import raise_from
 from . import errors
 from .errors import EWSWarning, TransportError, SOAPError, ErrorTimeoutExpired, ErrorBatchProcessingStopped, \
     ErrorQuotaExceeded, ErrorCannotDeleteObject, ErrorCreateItemAccessDenied, ErrorFolderNotFound, \
@@ -45,7 +46,7 @@ SOFTDELETED = 'SoftDeleted'
 TRAVERSAL_CHOICES = (SHALLOW, DEEP, SOFTDELETED)
 
 
-class EWSService:
+class EWSService(object):
     SERVICE_NAME = None  # The name of the SOAP service
     element_container_name = None  # The name of the XML element wrapping the collection of returned items
     extra_element_names = []  # Some services may return multiple item types. List them here.
@@ -107,7 +108,7 @@ class EWSService:
             try:
                 soap_response_payload = to_xml(r.text, encoding=r.encoding or 'utf-8')
             except ExpatError as e:
-                raise SOAPError('SOAP response is not XML: %s' % e) from e
+                raise_from(SOAPError('SOAP response is not XML: %s' % e), e)
             try:
                 res = self._get_soap_payload(soap_response=soap_response_payload)
             except (ErrorInvalidSchemaVersionForMailboxVersion, ErrorInvalidServerVersion):
@@ -188,7 +189,7 @@ class EWSService:
         try:
             return self._raise_errors(code=code, text=text, xml=xml)
         except ErrorBatchProcessingStopped as e:
-            raise EWSWarning(e.value) from e
+            raise_from(EWSWarning(e.value), e)
 
     @staticmethod
     def _raise_errors(code, text, xml):
@@ -202,8 +203,8 @@ class EWSService:
             raise vars(errors)[code](text)
         except KeyError as e:
             # Should not happen
-            raise TransportError('Unknown ResponseCode in ResponseMessage: %s (MessageText: %s, MessageXml: %s)' % (
-                code, text, xml)) from e
+            raise_from(TransportError('Unknown ResponseCode in ResponseMessage: %s (MessageText: %s, MessageXml: %s)' % (
+                code, text, xml)), e)
 
     def _get_elements_in_response(self, response):
         assert isinstance(response, list)
@@ -289,7 +290,7 @@ class GetServerTimeZones(EWSService):
     element_container_name = '{%s}TimeZoneDefinitions' % MNS
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(GetServerTimeZones, self).__init__(*args, **kwargs)
         self.element_name = '{%s}TimeZoneDefinition' % TNS
 
     def call(self, **kwargs):
@@ -319,7 +320,7 @@ class GetRoomLists(EWSService):
     element_container_name = '{%s}RoomLists' % MNS
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(GetRoomLists, self).__init__(*args, **kwargs)
         from .folders import RoomList
         self.element_name = RoomList.response_tag()
 
@@ -342,7 +343,7 @@ class GetRooms(EWSService):
     element_container_name = '{%s}Rooms' % MNS
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(GetRooms, self).__init__(*args, **kwargs)
         from .folders import Room
         self.element_name = Room.response_tag()
 
@@ -494,7 +495,7 @@ class FindFolder(PagingEWSService, EWSFolderService):
     ]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(FindFolder, self).__init__(*args, **kwargs)
         self.element_name = '{%s}Folder' % TNS
 
     def call(self, folder, **kwargs):
@@ -536,7 +537,7 @@ class GetFolder(EWSFolderService):
     ]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(GetFolder, self).__init__(*args, **kwargs)
         self.element_name = '{%s}Folder' % TNS
 
     def call(self, folder, **kwargs):
@@ -566,7 +567,7 @@ class ResolveNames(EWSAccountService):
     element_container_name = '{%s}ResolutionSet' % MNS
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(ResolveNames, self).__init__(*args, **kwargs)
         self.element_name = '{%s}Resolution' % TNS
 
     def call(self, **kwargs):
