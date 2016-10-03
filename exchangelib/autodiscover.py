@@ -14,9 +14,7 @@ from threading import Lock
 import queue
 import shelve
 
-from future.utils import raise_from
-
-import six
+from future.utils import raise_from, PY2
 
 import dns.resolver
 import requests.exceptions
@@ -42,7 +40,7 @@ TIMEOUT = 10  # Seconds
 AUTODISCOVER_PERSISTENT_STORAGE = '/tmp/exchangelib.cache'
 
 
-if six.PY2:
+if PY2:
     from contextlib import contextmanager
 
     @contextmanager

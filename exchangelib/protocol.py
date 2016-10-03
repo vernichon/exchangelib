@@ -10,7 +10,7 @@ from multiprocessing.pool import ThreadPool
 import logging
 from threading import Lock
 import random
-from six import with_metaclass
+from future.utils import with_metaclass
 
 from future.utils import raise_from
 from requests import adapters, Session

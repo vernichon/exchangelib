@@ -2,7 +2,9 @@ import re
 from xml.etree.ElementTree import Element
 import logging
 import time
-from six import PY3
+from collections import Iterator
+from future.utils import PY3
+from future.moves.urllib.parse import urlparse
 
 if PY3:
     from threading import get_ident
@@ -12,10 +14,7 @@ else:
 from datetime import datetime
 from copy import deepcopy
 import itertools
-from types import GeneratorType
 from decimal import Decimal
-
-from six.moves import urllib
 
 from future.utils import raise_from
 from .errors import TransportError, RateLimitError, RedirectError, RelativeRedirect
@@ -25,7 +24,7 @@ ElementType = type(Element('x'))  # Type is auto-generated inside cElementTree
 
 
 # Regex of UTF-8 control characters that are illegal in XML 1.0 (and XML 1.1)
-_illegal_xml_chars_RE = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
+_illegal_xml_chars_RE = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
 # UTF-8 byte order mark which may precede the XML from an Exchange server
 BOM = u'\xef\xbb\xbf'
 
@@ -54,7 +53,7 @@ def peek(iterable):
     """
     Checks if an iterable is empty and returns status and the rewinded generator
     """
-    if isinstance(iterable, (GeneratorType, map)):
+    if isinstance(iterable, Iterator):
         try:
             first = next(iterable)
         except StopIteration:
@@ -194,7 +193,7 @@ def get_domain(email):
 
 
 def split_url(url):
-    parsed_url = urllib.parse.urlparse(url)
+    parsed_url = urlparse(url)
     # Use netloc instead og hostname since hostname is None if URL is relative
     return parsed_url.scheme == 'https', parsed_url.netloc.lower(), parsed_url.path
 

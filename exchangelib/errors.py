@@ -1,7 +1,7 @@
 """
 Stores errors specific to exchangelib, and mirrors all the possible errors that EWS can return.
 """
-from six.moves import urllib
+from future.moves.urllib.parse import urlparse
 
 
 class EWSError(Exception):
@@ -41,7 +41,7 @@ class UnauthorizedError(EWSError):
 
 class RedirectError(TransportError):
     def __init__(self, url):
-        parsed_url = urllib.parse.urlparse(url)
+        parsed_url = urlparse(url)
         self.url = url
         self.server = parsed_url.hostname.lower()
         self.has_ssl = parsed_url.scheme == 'https'
