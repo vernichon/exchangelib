@@ -358,6 +358,139 @@ class Room(Mailbox):
         )
 
 
+
+
+DISTINGUISHED_PROPERTY_SET_MEETING = u'Meeting'
+
+DISTINGUISHED_PROPERTY_SET_APPOINTMENT = u'Appointment'
+
+DISTINGUISHED_PROPERTY_SET_COMMON = u'Common'
+
+DISTINGUISHED_PROPERTY_SET_PUBLIC_STRINGS = u'PublicStrings'
+
+DISTINGUISHED_PROPERTY_SET_ADDRESS = u'Address'
+
+DISTINGUISHED_PROPERTY_SET_INTERNET_HEADERS = u'InternetHeaders'
+
+DISTINGUISHED_PROPERTY_SET_CALENDAR_ASSISTANT = u'CalendarAssistant'
+
+DISTINGUISHED_PROPERTY_SET_UNIFIED_MESSAGING = u'UnifiedMessaging'
+
+
+class ExtendedFieldURI(EWSElement):
+    ELEMENT_NAME = 'ExtendedFieldURI'
+
+    DISTINGUISHED_PROPERTY_SET_ID_CHOICES = (
+        DISTINGUISHED_PROPERTY_SET_MEETING,
+        DISTINGUISHED_PROPERTY_SET_APPOINTMENT,
+        DISTINGUISHED_PROPERTY_SET_COMMON,
+        DISTINGUISHED_PROPERTY_SET_PUBLIC_STRINGS,
+        DISTINGUISHED_PROPERTY_SET_ADDRESS,
+        DISTINGUISHED_PROPERTY_SET_INTERNET_HEADERS,
+        DISTINGUISHED_PROPERTY_SET_CALENDAR_ASSISTANT,
+        DISTINGUISHED_PROPERTY_SET_UNIFIED_MESSAGING
+    )
+
+    ATTRIBUTES = {
+        'distinguished_property_set_id': 'DistinguishedPropertySetId',
+        'property_set_id': 'PropertySetId',
+        'property_tag': 'PropertyTag',
+        'property_name': 'PropertyName',
+        'property_id': 'PropertyId',
+        'property_type': 'PropertyType'
+    }
+
+    __slots__ = tuple(ATTRIBUTES)
+
+    def __init__(self,
+                 distinguished_property_set_id=None,
+                 property_set_id=None,
+                 property_tag=None,
+                 property_name=None,
+                 property_id=None,
+                 property_type=None):
+
+        exclusive_required_args = filter(
+            lambda i: i != None,
+            (
+                distinguished_property_set_id,
+                property_set_id,
+                property_tag
+            )
+        )
+
+        if len(exclusive_required_args) > 1:
+            raise ValueError(
+                "distinguished_property_set_id, property_set_id and property_tag cannot be used together"
+            )
+
+        if not exclusive_required_args:
+            raise ValueError(
+                "Either distinguished_property_set_id, property_set_id or property_tag are required."
+            )
+
+        if distinguished_property_set_id and not (property_id or property_name) and not property_type:
+            raise ValueError('distinguished_property_set_id requires '
+                             'either property_id or property_name, '
+                             'and property_type to be set')
+
+        if property_set_id and not (property_id or property_name) and not property_type:
+            raise ValueError('property_set_id requires '
+                             'either property_id or property_name, '
+                             'and property_type to be set')
+
+        if property_tag and (property_name or property_id):
+            raise ValueError('property_tag cannot be used together with property_name or property_id')
+
+        exclusive_args = filter(
+            lambda i: i != None,
+            (
+                property_name,
+                property_id
+            )
+        )
+
+        if len(exclusive_args) > 1:
+            raise ValueError('property_name and property_id cannot be used together')
+
+        if (distinguished_property_set_id
+            and distinguished_property_set_id not in self.DISTINGUISHED_PROPERTY_SET_ID_CHOICES):
+            raise ValueError(
+                "Invalid distinguished_property_set_id (%s), valid values are %s" %
+                (distinguished_property_set_id, ', '.join(self.DISTINGUISHED_PROPERTY_SET_ID_CHOICES))
+            )
+
+        # TODO: Validate property_type
+
+        self.distinguished_property_set_id = distinguished_property_set_id
+        self.property_set_id = property_set_id
+        self.property_tag = property_tag
+        self.property_name = property_name
+        self.property_id = property_id
+        self.property_type = property_type
+
+    @property
+    def attributes(self):
+        attributes = {}
+
+        for (attrib_name, elem_attribute) in self.ATTRIBUTES.items():
+            attrib_value = getattr(self, attrib_name, None)
+
+            if attrib_value:
+                attributes[elem_attribute] = attrib_value
+
+        return attributes
+
+    def to_xml(self, version):
+        # Don't use create_element with extra args. It caches results and Id is always unique.
+        elem = create_element(self.request_tag())
+
+        for (elem_attribute, attrib_value) in self.attributes.items():
+            elem.set(elem_attribute, attrib_value)
+
+        return elem
+
+
 class ExtendedProperty(EWSElement):
     ELEMENT_NAME = 'ExtendedProperty'
 
@@ -490,7 +623,7 @@ class Item(EWSElement):
         'body': ('Body', str),
         'reminder_is_set': ('ReminderIsSet', bool),
         'categories': ('Categories', [str]),
-        'extern_id': (ExternId, ExternId),
+        'extern_id': (ExternId, ExternId)
     }
     # These are optional fields that we don't normally request, for performance reasons.
     EXTRA_ITEM_FIELDS = {
@@ -512,9 +645,13 @@ class Item(EWSElement):
     # Fields that are read-only in Exchange. Put mime_content here until it's properly supported
     READONLY_FIELDS = {'is_draft'}
 
+    extra_fields = None
+
     __slots__ = tuple(ITEM_FIELDS) + tuple(EXTRA_ITEM_FIELDS)
 
     def __init__(self, **kwargs):
+        self.extra_fields = kwargs.pop('extra_fields', {})
+
         for k in Item.__slots__:
             default = False if k == 'reminder_is_set' else None
             v = kwargs.pop(k, default)
@@ -615,11 +752,27 @@ class Item(EWSElement):
         return id_elem.get('Id'), id_elem.get('ChangeKey')
 
     @classmethod
-    def from_xml(cls, elem, with_extra=False):
+    def from_xml(cls, elem, with_extra=False, extended_properties_mapping=None):
         assert elem.tag == cls.response_tag()
+
         item_id, changekey = cls.id_from_xml(elem)
         kwargs = {}
         extended_properties = elem.findall(ExtendedProperty.response_tag())
+
+        extra_fields = {}
+
+        if extended_properties_mapping:
+            for (field_name, extended_property_definition) in extended_properties_mapping.items():
+                for extended_property in extended_properties:
+                    extended_field_uri = extended_property.find('{%s}ExtendedFieldURI' % TNS)
+
+                    if extended_field_uri.attrib == extended_property_definition.attributes:
+                        extended_field_value = get_xml_attr(extended_property, '{%s}Value' % TNS) or ''
+                        extra_fields[field_name] = extended_field_value
+                        break
+
+        kwargs['extra_fields'] = extra_fields
+
         for fieldname in cls.fieldnames(with_extra=with_extra):
             field_type = cls.type_for_field(fieldname)
             if field_type == EWSDateTime:
@@ -750,6 +903,8 @@ class Folder:
         # Define the extra properties we want on the return objects. 'body' field can only be fetched with GetItem.
         additional_fields = None
 
+        extended_properties = kwargs.pop('extended_properties', {})
+
         # Build up any restrictions
         q = None
         if args:
@@ -806,7 +961,8 @@ class Folder:
                 kwargs_q &= Q(**{key: value})
             q = kwargs_q
         if q:
-            restriction = Restriction(q.translate_fields(item_model=self.item_model))
+            restriction = Restriction(q.translate_fields(item_model=self.item_model,
+                                                         extended_properties=extended_properties))
         else:
             restriction = None
         log.debug(
@@ -878,7 +1034,7 @@ class Folder:
             folder=self, items=items, conflict_resolution=conflict_resolution, message_disposition=message_disposition,
             send_meeting_invitations_or_cancellations=send_meeting_invitations_or_cancellations)))
 
-    def get_items(self, ids, with_extra=True):
+    def get_items(self, ids, with_extra=True, extended_properties=None):
         # 'with_extra' determines whether to get the extra fields defined in Item.EXTRA_ITEM_FIELDS. This is still a
         # kludge - instead, the user should be able to specify the exact fields to get or ignore. See also find_items()
         if hasattr(self, 'with_extra_fields'):
@@ -890,9 +1046,11 @@ class Folder:
             # We accept generators, so it's not always convenient for caller to know up-front if 'items' is empty. Allow
             # empty 'items' and return early.
             return []
+        print(self.item_model)
         return list(map(
-            lambda i: self.item_model.from_xml(i, with_extra=with_extra),
-            GetItem(self.account.protocol).call(folder=self, ids=ids, with_extra=with_extra)
+            lambda i: self.item_model.from_xml(i, with_extra=with_extra, extended_properties_mapping=extended_properties),
+            GetItem(self.account.protocol).call(folder=self, ids=ids, with_extra=with_extra,
+                                                extended_properties=extended_properties)
         ))
 
     def test_access(self):
@@ -915,7 +1073,7 @@ class Folder:
                 set_xml_value(distinguishedfolderid, mailbox, self.account.version)
             return distinguishedfolderid
 
-    def get_xml(self, ids, with_extra):
+    def get_xml(self, ids, with_extra, extended_properties):
         # Takes a list of (item_id, changekey) tuples or Item objects and returns the XML for a GetItem request.
         #
         # The 'additional_properties' list should be configurable. 'body' element can only be fetched with GetItem.
@@ -929,9 +1087,16 @@ class Folder:
         getitem = create_element('m:%s' % GetItem.SERVICE_NAME)
         itemshape = create_element('m:ItemShape')
         add_xml_child(itemshape, 't:BaseShape', IdOnly)
-        additional_properties = self.item_model.additional_property_elems(with_extra=with_extra)
-        if additional_properties:
-            add_xml_child(itemshape, 't:AdditionalProperties', additional_properties)
+
+        from .services import create_additional_properties_element
+
+        additionalproperties_element = create_additional_properties_element((extended_properties or {}).values(), None)
+
+        for field in self.item_model.additional_property_elems(with_extra=with_extra):
+            additionalproperties_element.append(field)
+
+        itemshape.append(additionalproperties_element)
+
         getitem.append(itemshape)
         item_ids = create_element('m:ItemIds')
         n = 0
@@ -941,7 +1106,9 @@ class Folder:
             set_xml_value(item_ids, item_id, self.account.version)
         if not n:
             raise AttributeError('"ids" must not be empty')
+
         getitem.append(item_ids)
+
         return getitem
 
     def create_xml(self, items, message_disposition, send_meeting_invitations):
@@ -1624,3 +1791,42 @@ FOLDER_CLASS_MAP = dict()
 for folder_model in WELLKNOWN_FOLDERS.values():
     if folder_model.CONTAINER_CLASS:
         FOLDER_CLASS_MAP[folder_model.CONTAINER_CLASS] = folder_model
+
+
+class CancelCalendarItem(EWSElement):
+
+    ELEMENT_NAME = 'CancelCalendarItem'
+
+    ITEM_FIELDS = {
+        'reference_item_id': ('ReferenceItemId', ItemId),
+        'new_body_content': ('NewBodyContent', str)
+    }
+
+    ORDERED_FIELDS = (
+        'reference_item_id',
+        'new_body_content'
+    )
+
+    REQUIRED_FIELDS = {'reference_item_id', 'new_body_content'}
+
+    __slots__ = tuple(ITEM_FIELDS)
+
+    def __init__(self, **kwargs):
+        for k in self.ITEM_FIELDS:
+            v = kwargs.pop(k, None)
+            setattr(self, k, v)
+
+    def to_xml(self, version):
+        elem = create_element(self.request_tag())
+
+        elem.append(create_element('t:ReferenceItemId',
+                                Id=self.reference_item_id.id,
+                                ChangeKey=self.reference_item_id.changekey))
+
+
+        new_body_content = create_element('t:NewBodyContent', BodyType='Text')
+        new_body_content.text = self.new_body_content
+
+        elem.append(new_body_content)
+
+        return elem

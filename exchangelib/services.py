@@ -384,7 +384,8 @@ class GetItem(EWSPooledService):
     def call(self, folder, **kwargs):
         self.element_name = folder.item_model.response_tag()
         return self._pool_requests(account=folder.account, payload_func=folder.get_xml, items=kwargs['ids'],
-                                   with_extra=kwargs['with_extra'])
+                                   with_extra=kwargs['with_extra'],
+                                   extended_properties=kwargs.get('extended_properties', None))
 
 
 class CreateItem(EWSPooledService):
@@ -443,6 +444,26 @@ class UpdateItem(EWSPooledService):
             send_meeting_invitations_or_cancellations=kwargs['send_meeting_invitations_or_cancellations'],
         )
 
+def create_additional_properties_element(additional_fields, version):
+    """
+    Helper function to create the AdditionalProperties element.
+
+    :param additional_fields: Iterable containing either FieldURI values or ExtendedFieldURI instances.
+    :param version: Protocol version
+    :return:
+    """
+    additionalproperties = create_element('t:AdditionalProperties')
+
+    from .folders import ExtendedFieldURI
+
+    for field_uri in additional_fields:
+        if isinstance(field_uri, ExtendedFieldURI):
+            additionalproperties.append(field_uri.to_xml(version))
+        else:
+            additionalproperties.append(create_element('t:FieldURI', FieldURI=field_uri))
+
+    return additionalproperties
+
 
 class FindItem(PagingEWSService, EWSFolderService):
     """
@@ -462,10 +483,13 @@ class FindItem(PagingEWSService, EWSFolderService):
         finditem = create_element('m:%s' % self.SERVICE_NAME, Traversal=depth)
         itemshape = create_element('m:ItemShape')
         add_xml_child(itemshape, 't:BaseShape', shape)
+
         if additional_fields:
-            additionalproperties = create_element('t:AdditionalProperties')
-            for field_uri in additional_fields:
-                additionalproperties.append(create_element('t:FieldURI', FieldURI=field_uri))
+            additionalproperties = create_additional_properties_element(
+                additional_fields,
+                self.protocol.version
+            )
+
             itemshape.append(additionalproperties)
         finditem.append(itemshape)
         indexedpageviewitem = create_element('m:IndexedPageItemView', Offset=str(offset), BasePoint='Beginning')
@@ -506,9 +530,11 @@ class FindFolder(PagingEWSService, EWSFolderService):
         foldershape = create_element('m:FolderShape')
         add_xml_child(foldershape, 't:BaseShape', shape)
         if additional_fields:
-            additionalproperties = create_element('t:AdditionalProperties')
-            for field_uri in additional_fields:
-                additionalproperties.append(create_element('t:FieldURI', FieldURI=field_uri))
+            additionalproperties = create_additional_properties_element(
+                additional_fields,
+                self.protocol.version
+            )
+
             foldershape.append(additionalproperties)
         findfolder.append(foldershape)
         if folder.account.protocol.version.build >= EXCHANGE_2010:
@@ -548,9 +574,11 @@ class GetFolder(EWSFolderService):
         foldershape = create_element('m:FolderShape')
         add_xml_child(foldershape, 't:BaseShape', shape)
         if additional_fields:
-            additionalproperties = create_element('t:AdditionalProperties')
-            for field_uri in additional_fields:
-                additionalproperties.append(create_element('t:FieldURI', FieldURI=field_uri))
+            additionalproperties = create_additional_properties_element(
+                additional_fields,
+                self.protocol.version
+            )
+
             foldershape.append(additionalproperties)
         getfolder.append(foldershape)
         folderids = create_element('m:FolderIds')

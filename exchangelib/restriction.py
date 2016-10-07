@@ -48,6 +48,8 @@ class Q:
     LOOKUP_STARTSWITH = 'startswith'
     LOOKUP_ISTARTSWITH = 'istartswith'
 
+    extended_property = None
+
     def __init__(self, *args, **kwargs):
         if 'conn_type' in kwargs:
             self.conn_type = kwargs.pop('conn_type')
@@ -214,14 +216,18 @@ class Q:
                 expr = self.conn_type + ' (%s)' % expr
         return expr
 
-    def translate_fields(self, item_model):
+    def translate_fields(self, item_model, extended_properties=None):
         # Recursively translate Python attribute names to EWS FieldURI values
         if self.translated:
             return self
-        if self.field is not None:
+
+        if self.field in extended_properties:
+            self.extended_property = extended_properties[self.field]
+        elif self.field is not None:
             self.field = item_model.fielduri_for_field(self.field)
+
         for c in self.children:
-            c.translate_fields(item_model=item_model)
+            c.translate_fields(item_model=item_model, extended_properties=extended_properties)
         self.translated = True
         return self
 
@@ -248,7 +254,12 @@ class Q:
         if self.is_leaf():
             assert self.field and self.op and self.value is not None
             elem = self._op_to_xml(self.op)
-            field = create_element('t:FieldURI', FieldURI=self.field)
+
+            if self.extended_property:
+                field = self.extended_property.to_xml(None)
+            else:
+                field = create_element('t:FieldURI', FieldURI=self.field)
+
             elem.append(field)
             constant = create_element('t:Constant', Value=value_to_xml_text(self.value))
             if self.op in self.CONTAINS_OPS:
