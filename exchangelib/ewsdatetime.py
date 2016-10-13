@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import datetime
 from future.utils import raise_from
 import pytz

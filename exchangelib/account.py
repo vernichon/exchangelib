@@ -1,5 +1,8 @@
+from __future__ import unicode_literals
+
 from logging import getLogger
-from future.utils import raise_from
+from future.utils import raise_from, python_2_unicode_compatible
+from six import text_type
 from .autodiscover import discover
 from .credentials import DELEGATE, IMPERSONATION
 from .errors import ErrorFolderNotFound, ErrorAccessDenied
@@ -11,6 +14,7 @@ from .util import get_domain
 log = getLogger(__name__)
 
 
+@python_2_unicode_compatible
 class Account:
     """
     Models an Exchange server user account. The primary key for an account is its PrimarySMTPAddress
@@ -99,7 +103,7 @@ class Account:
             if not flds:
                 raise_from(ErrorFolderNotFound('No useable default %s folders' % fld_class.__name__), e)
             assert len(flds) == 1, 'Multiple possible default %s folders: %s' % (
-                fld_class.__name__, [str(f) for f in flds])
+                fld_class.__name__, [text_type(f) for f in flds])
             return flds[0]
 
     @property

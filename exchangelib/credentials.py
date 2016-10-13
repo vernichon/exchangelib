@@ -1,3 +1,7 @@
+from __future__ import unicode_literals
+
+from future.utils import python_2_unicode_compatible
+
 """
 Implements an Exchange user object and access types. Exchange provides two different ways of granting access for a
 login to a specific account. Impersonation is used mainly for service accounts that connect via EWS. Delegate is used
@@ -12,6 +16,7 @@ IMPERSONATION = 'impersonation'
 DELEGATE = 'delegate'
 
 
+@python_2_unicode_compatible
 class Credentials:
     # Keeps login info the way Exchange likes it. Usernames for authentication are of one of these forms:
     #
