@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import re
 from xml.etree.ElementTree import Element
 import logging
@@ -5,6 +7,8 @@ import time
 from collections import Iterator
 from future.utils import PY3
 from future.moves.urllib.parse import urlparse
+
+from six import text_type, string_types
 
 if PY3:
     from threading import get_ident
@@ -24,9 +28,9 @@ ElementType = type(Element('x'))  # Type is auto-generated inside cElementTree
 
 
 # Regex of UTF-8 control characters that are illegal in XML 1.0 (and XML 1.1)
-_illegal_xml_chars_RE = re.compile(u'[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
+_illegal_xml_chars_RE = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1F\uD800-\uDFFF\uFFFE\uFFFF]')
 # UTF-8 byte order mark which may precede the XML from an Exchange server
-BOM = u'\xef\xbb\xbf'
+BOM = '\xef\xbb\xbf'
 
 
 def chunkify(iterable, chunksize):
@@ -84,12 +88,12 @@ def get_xml_attrs(tree, name):
 
 def value_to_xml_text(value):
     from .ewsdatetime import EWSDateTime
-    if isinstance(value, str):
+    if isinstance(value, string_types):
         return safe_xml_value(value)
     if isinstance(value, bool):
         return '1' if value else '0'
     if isinstance(value, (int, Decimal)):
-        return str(value)
+        return text_type(value)
     if isinstance(value, EWSDateTime):
         return value.ewsformat()
     raise ValueError('Unsupported type: %s (%s)' % (type(value), value))
@@ -98,7 +102,7 @@ def value_to_xml_text(value):
 def set_xml_value(elem, value, version):
     from .folders import EWSElement
     from .ewsdatetime import EWSDateTime
-    if isinstance(value, (str, bool, int, Decimal, EWSDateTime)):
+    if isinstance(value, (string_types + (bool, int, Decimal, EWSDateTime))):
         elem.text = value_to_xml_text(value)
     elif isinstance(value, (tuple, list)):
         for v in value:
@@ -107,7 +111,7 @@ def set_xml_value(elem, value, version):
                 elem.append(v.to_xml(version))
             elif isinstance(v, ElementType):
                 elem.append(v)
-            elif isinstance(v, str):
+            elif isinstance(v, string_types):
                 add_xml_child(elem, 't:String', v)
             else:
                 raise AttributeError('Unsupported type %s for list value %s on elem %s' % (type(v), v, elem))
@@ -122,7 +126,7 @@ def set_xml_value(elem, value, version):
 
 
 def safe_xml_value(value, replacement='?'):
-    return str(_illegal_xml_chars_RE.sub(replacement, value))
+    return text_type(_illegal_xml_chars_RE.sub(replacement, value))
 
 
 # Keeps a cache of Element objects to deepcopy
@@ -164,14 +168,14 @@ def to_xml(text, encoding):
             except IndexError:
                 offending_line = ''
             offending_excerpt = offending_line[max(0, col_no - 20):col_no + 20].decode('ascii', 'ignore')
-            raise_from(ParseError('%s\nOffending text: [...]%s[...]' % (str(e), offending_excerpt)), e)
+            raise_from(ParseError('%s\nOffending text: [...]%s[...]' % (text_type(e), offending_excerpt)), e)
 
 
 def is_xml(text):
     """
     Helper function. Lightweight test if response is an XML doc
     """
-    return text.lstrip(BOM)[0:5] == u'<?xml'
+    return text.lstrip(BOM)[0:5] == '<?xml'
 
 
 class DummyRequest:
@@ -292,7 +296,7 @@ Response headers: %(response_headers)s'''
                 r.request.headers = headers
                 r.headers = {'DummyResponseHeader': None}
             d2 = datetime.now()
-            log_vals['response_time'] = str(d2 - d1)
+            log_vals['response_time'] = text_type(d2 - d1)
             log_vals['status_code'] = r.status_code
             log_vals['request_headers'] = r.request.headers
             log_vals['response_headers'] = r.headers
@@ -353,7 +357,7 @@ Response headers: %(response_headers)s'''
         # Let higher layers handle this. Add data for better debugging.
         log_msg = '%(exc_cls)s: %(exc_msg)s\n' + log_msg
         log_vals['exc_cls'] = e.__class__.__name__
-        log_vals['exc_msg'] = str(e)
+        log_vals['exc_msg'] = text_type(e)
         log_msg += '\nRequest data: %(data)s'
         log_vals['data'] = data
         log_msg += '\nResponse data: %(text)s'
@@ -381,3 +385,7 @@ Response headers: %(response_headers)s'''
             raise TransportError('Unknown failure\n' + log_msg % log_vals)
     log.debug('Session %(session_id)s thread %(thread_id)s: Useful response from %(url)s', log_vals)
     return r, session
+
+
+def isanysubclass(cls, classinfos):
+    return any([issubclass(cls, c) for c in classinfos])

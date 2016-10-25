@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 """
 A protocol is an endpoint for EWS service connections. It contains all necessary information to make HTTPS connections.
 
@@ -10,9 +11,10 @@ from multiprocessing.pool import ThreadPool
 import logging
 from threading import Lock
 import random
-from future.utils import with_metaclass
 
-from future.utils import raise_from
+from future.utils import with_metaclass, python_2_unicode_compatible, raise_from
+from six import text_type
+
 from requests import adapters, Session
 
 from .credentials import Credentials
@@ -156,13 +158,14 @@ class CachingProtocol(type):
         with cls._protocol_cache_lock:
             protocol = cls._protocol_cache.get(_protocol_cache_key)
             if protocol is None:
-                log.debug("Protocol __call__ cache miss. Adding key '%s'", str(_protocol_cache_key))
+                log.debug("Protocol __call__ cache miss. Adding key '%s'", text_type(_protocol_cache_key))
                 protocol = super(CachingProtocol, cls).__call__(*args, **kwargs)
                 cls._protocol_cache[_protocol_cache_key] = protocol
         log.debug('_protocol_cache_lock released')
         return protocol
 
 
+@python_2_unicode_compatible
 class Protocol(with_metaclass(CachingProtocol, BaseProtocol)):
     def __init__(self, *args, **kwargs):
         super(Protocol, self).__init__(*args, **kwargs)
@@ -223,7 +226,7 @@ class EWSSession(Session):
         for i in range(pool.pool.qsize()):
             conn = pool._get_conn()
             if conn.sock:
-                log.debug('Closing socket %s', str(conn.sock.getsockname()))
+                log.debug('Closing socket %s', text_type(conn.sock.getsockname()))
                 conn.sock.shutdown(socket.SHUT_RDWR)
                 conn.sock.close()
 

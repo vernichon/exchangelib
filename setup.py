@@ -13,14 +13,14 @@ def read(fname):
 
 setup(
     name='exchangelib',
-    version='1.7.0',
+    version='1.7.1',
     author='Erik Cederstrand',
     author_email='erik@cederstrand.dk',
     description='Client for Microsoft Exchange Web Services (EWS)',
     long_description=read('README.rst'),
     license='BSD',
     keywords='Exchange EWS autodiscover',
-    install_requires=['requests>=2.7', 'requests-ntlm>=0.2.0', 'dnspython>=1.12.0', 'pytz', 'lxml', 'future'],
+    install_requires=['requests>=2.7', 'requests-ntlm>=0.2.0', 'dnspython>=1.12.0', 'pytz', 'lxml', 'future', 'six'],
     packages=['exchangelib'],
     tests_require=['PyYAML'],
     test_suite='tests',

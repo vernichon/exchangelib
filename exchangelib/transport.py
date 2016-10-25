@@ -1,7 +1,10 @@
+from __future__ import unicode_literals
+
 import logging
 from xml.etree.ElementTree import tostring
 
 from future.utils import raise_from
+from six import text_type
 
 import requests.sessions
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
@@ -66,7 +69,7 @@ def _test_service_credentials(protocol):
 def _test_response(auth, response):
     log.debug('Response headers: %s', response.headers)
     resp = response.text
-    log.debug('Response data: %s [...]', str(resp[:1000]))
+    log.debug('Response data: %s [...]', text_type(resp[:1000]))
     if is_xml(resp):
         log.debug('This is XML')
         # Assume that any XML response is good news

@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 """
 Autodiscover is a Microsoft method for automatically getting the hostname of the Exchange server and the server
 version of the server holding the email address using only the email address and password of the user (and possibly
@@ -14,7 +16,8 @@ from threading import Lock
 import queue
 import shelve
 
-from future.utils import raise_from, PY2
+from future.utils import raise_from, PY2, python_2_unicode_compatible
+from six import text_type
 
 import dns.resolver
 import requests.exceptions
@@ -54,6 +57,8 @@ if PY2:
 else:
     shelve_open = shelve.open
 
+
+@python_2_unicode_compatible
 class AutodiscoverCache:
     # Stores the translation from (email domain, credentials) -> AutodiscoverProtocol object so we can re-use TCP
     # connections to an autodiscover server within the same process. Also persists the email domain -> (autodiscover
@@ -130,7 +135,7 @@ class AutodiscoverCache:
         self.close()
 
     def __str__(self):
-        return str(self._protocols)
+        return text_type(self._protocols)
 
 
 _autodiscover_cache = AutodiscoverCache()
@@ -471,6 +476,7 @@ def _get_hostname_from_srv(hostname):
         raise_from(AutoDiscoverFailed('Nonexistent domain %s' % hostname), e)
 
 
+@python_2_unicode_compatible
 class AutodiscoverProtocol(BaseProtocol):
     # Protocol which implements the bare essentials for autodiscover
     TIMEOUT = TIMEOUT

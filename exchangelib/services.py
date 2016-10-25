@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 """
 Implement a selection of EWS services.
 
@@ -16,6 +17,8 @@ from xml.parsers.expat import ExpatError
 import traceback
 
 from future.utils import raise_from
+from six import text_type
+
 from . import errors
 from .errors import EWSWarning, TransportError, SOAPError, ErrorTimeoutExpired, ErrorBatchProcessingStopped, \
     ErrorQuotaExceeded, ErrorCannotDeleteObject, ErrorCreateItemAccessDenied, ErrorFolderNotFound, \
@@ -468,7 +471,7 @@ class FindItem(PagingEWSService, EWSFolderService):
                 additionalproperties.append(create_element('t:FieldURI', FieldURI=field_uri))
             itemshape.append(additionalproperties)
         finditem.append(itemshape)
-        indexedpageviewitem = create_element('m:IndexedPageItemView', Offset=str(offset), BasePoint='Beginning')
+        indexedpageviewitem = create_element('m:IndexedPageItemView', Offset=text_type(offset), BasePoint='Beginning')
         finditem.append(indexedpageviewitem)
         if restriction:
             finditem.append(restriction.xml)
@@ -512,7 +515,7 @@ class FindFolder(PagingEWSService, EWSFolderService):
             foldershape.append(additionalproperties)
         findfolder.append(foldershape)
         if folder.account.protocol.version.build >= EXCHANGE_2010:
-            indexedpageviewitem = create_element('m:IndexedPageFolderView', Offset=str(offset), BasePoint='Beginning')
+            indexedpageviewitem = create_element('m:IndexedPageFolderView', Offset=text_type(offset), BasePoint='Beginning')
             findfolder.append(indexedpageviewitem)
         else:
             assert offset == 0, 'Offset is %s' % offset

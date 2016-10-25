@@ -1,10 +1,14 @@
+from __future__ import unicode_literals
+
 import logging
 from xml.etree.ElementTree import ParseError
 
 import requests.sessions
 import requests.adapters
 
-from future.utils import raise_from
+from future.utils import raise_from, python_2_unicode_compatible
+from six import text_type
+
 from .errors import UnauthorizedError, TransportError, EWSWarning
 from .transport import TNS, SOAPNS, dummy_xml, get_auth_instance
 from .util import is_xml, to_xml, post_ratelimited
@@ -41,7 +45,8 @@ VERSIONS = {
 API_VERSIONS = sorted({v[0] for v in VERSIONS.values()}, reverse=True)
 
 
-class Build:
+@python_2_unicode_compatible
+class Build(object):
     """
     Holds methods for working with build numbers
     """
@@ -74,7 +79,7 @@ class Build:
         self.major_build = major_build
         self.minor_build = minor_build
         if major_version < 8:
-            raise ValueError("Exchange major versions below 8 don't support EWS (%s)", str(self))
+            raise ValueError("Exchange major versions below 8 don't support EWS (%s)", text_type(self))
 
     @classmethod
     def from_xml(cls, elem):
@@ -137,7 +142,8 @@ EXCHANGE_2010 = Build(14, 0)
 EXCHANGE_2013 = Build(15, 0)
 
 
-class Version:
+@python_2_unicode_compatible
+class Version(object):
     """
     Holds information about the server version
     """
@@ -174,7 +180,7 @@ class Version:
                                                      verify_ssl=protocol.verify_ssl)
             log.debug('Shortname according to %s: %s', protocol.types_url, shortname)
         except (TransportError, UnauthorizedError) as e:
-            log.info(str(e))
+            log.info(text_type(e))
             shortname = None
         api_version = VERSIONS[shortname][0] if shortname else None
         return cls._guess_version_from_service(protocol=protocol, hint=api_version)

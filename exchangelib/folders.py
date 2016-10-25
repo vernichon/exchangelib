@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+
+from exchangelib.util import isanysubclass
+from future.utils import python_2_unicode_compatible
+from six import text_type, string_types
+
+string_type = string_types[0]
+
 """
 Implements a selection of the folders and folder items found in an Exchange account.
 
@@ -49,12 +57,12 @@ MOVE_TO_DELETED_ITEMS = 'MoveToDeletedItems'
 DELETE_TYPE_CHOICES = (HARD_DELETE, SOFT_DELETE, MOVE_TO_DELETED_ITEMS)
 
 
-class Choice(str):
+class Choice(text_type):
     # A helper class used for string enums
     pass
 
 
-class Email(str):
+class Email(text_type):
     # A helper class used for email address string
     pass
 
@@ -87,8 +95,8 @@ class ItemId(EWSElement):
     __slots__ = ('id', 'changekey')
 
     def __init__(self, id, changekey):
-        assert isinstance(id, str)
-        assert isinstance(changekey, str)
+        assert isinstance(id, string_types)
+        assert isinstance(changekey, string_types)
         self.id = id
         self.changekey = changekey
 
@@ -138,7 +146,7 @@ class EmailAddress(IndexedField):
 
     def __init__(self, email, label='EmailAddress1'):
         assert label in self.LABELS, label
-        assert isinstance(email, str), email
+        assert isinstance(email, string_types), email
         self.label = label
         self.email = email
 
@@ -182,13 +190,13 @@ class PhoneNumber(IndexedField):
 
     def __init__(self, phone_number, label='PrimaryPhone'):
         assert label in self.LABELS, label
-        assert isinstance(phone_number, (int, str)), phone_number
+        assert isinstance(phone_number, (int, string_types)), phone_number
         self.label = label
         self.phone_number = phone_number
 
     def to_xml(self, version):
         entry = create_element(self.request_tag(), Key=self.label)
-        set_xml_value(entry, str(self.phone_number), version)
+        set_xml_value(entry, text_type(self.phone_number), version)
         return entry
 
     @classmethod
@@ -221,11 +229,11 @@ class PhysicalAddress(IndexedField):
 
     def __init__(self, street, city, state, country, zipcode, label='Business'):
         assert label in self.LABELS, label
-        assert isinstance(street, str), street
-        assert isinstance(city, str), city
-        assert isinstance(state, str), state
-        assert isinstance(country, str), country
-        assert isinstance(zipcode, (str, int)), zipcode
+        assert isinstance(street, string_types), street
+        assert isinstance(city, string_types), city
+        assert isinstance(state, string_types), state
+        assert isinstance(country, string_types), country
+        assert isinstance(zipcode, (int, string_types)), zipcode
         self.label = label
         self.street = street  # Street *and* house number (and other labels)
         self.city = city
@@ -239,7 +247,7 @@ class PhysicalAddress(IndexedField):
         add_xml_child(entry, 't:City', self.city)
         add_xml_child(entry, 't:State', self.state)
         add_xml_child(entry, 't:CountryOrRegion', self.country)
-        add_xml_child(entry, 't:PostalCode', str(self.zipcode))
+        add_xml_child(entry, 't:PostalCode', text_type(self.zipcode))
         return entry
 
     @classmethod
@@ -276,9 +284,9 @@ class Mailbox(EWSElement):
     def __init__(self, name=None, email_address=None, mailbox_type=None, item_id=None):
         # There's also the 'RoutingType' element, but it's optional and must have value "SMTP"
         if name is not None:
-            assert isinstance(name, str)
+            assert isinstance(name, string_types)
         if email_address is not None:
-            assert isinstance(email_address, str)
+            assert isinstance(email_address, string_types)
         if mailbox_type is not None:
             assert mailbox_type in self.MAILBOX_TYPES
         if item_id is not None:
@@ -368,7 +376,7 @@ class ExtendedProperty(EWSElement):
     __slots__ = ('value',)
 
     def __init__(self, value):
-        assert isinstance(value, str)
+        assert isinstance(value, string_types)
         self.value = value
 
     @classmethod
@@ -480,24 +488,24 @@ class Item(EWSElement):
     # 'extern_id' is not a native EWS Item field. We use it for identification when item originates in an external
     # system. The field is implemented as an extended property on the Item.
     ITEM_FIELDS = {
-        'item_id': ('Id', str),
-        'changekey': ('ChangeKey', str),
-        # 'mime_content': ('MimeContent', str),
+        'item_id': ('Id', string_type),
+        'changekey': ('ChangeKey', string_type),
+        # 'mime_content': ('MimeContent', string_type),
         'sensitivity': ('Sensitivity', Choice),
         'importance': ('Importance', Choice),
         'is_draft': ('IsDraft', bool),
-        'subject': ('Subject', str),
-        'body': ('Body', str),
+        'subject': ('Subject', string_type),
+        'body': ('Body', string_type),
         'reminder_is_set': ('ReminderIsSet', bool),
-        'categories': ('Categories', [str]),
-        'extern_id': (ExternId, ExternId),
+        'categories': ('Categories', [string_type]),
+        'extern_id': (ExternId, ExternId)
     }
     # These are optional fields that we don't normally request, for performance reasons.
     EXTRA_ITEM_FIELDS = {
         'datetime_created': ('DateTimeCreated', EWSDateTime),
         'datetime_sent': ('DateTimeSent', EWSDateTime),
         'datetime_received': ('DateTimeReceived', EWSDateTime),
-        'last_modified_name': ('LastModifiedName', str),
+        'last_modified_name': ('LastModifiedName', string_type),
         'last_modified_time': ('LastModifiedTime', EWSDateTime),
     }
     # Possible values for string enums
@@ -555,7 +563,7 @@ class Item(EWSElement):
         # See all valid FieldURI values at https://msdn.microsoft.com/en-us/library/office/aa494315(v=exchg.150).aspx
         try:
             field_uri = cls.uri_for_field(fieldname)
-            if isinstance(field_uri, str):
+            if isinstance(field_uri, string_types):
                 return '%s:%s' % (cls.FIELDURI_PREFIX, field_uri)
             return field_uri
         except KeyError:
@@ -563,7 +571,7 @@ class Item(EWSElement):
 
     @classmethod
     def elem_for_field(cls, fieldname):
-        assert isinstance(fieldname, str)
+        assert isinstance(fieldname, string_types)
         try:
             if fieldname == 'body':
                 return create_element('t:%s' % cls.uri_for_field(fieldname), BodyType='Text')
@@ -577,7 +585,7 @@ class Item(EWSElement):
             uri = cls.uri_for_field(fieldname)
         except KeyError:
             raise ValueError("No fielduri defined for fieldname '%s'" % fieldname)
-        if isinstance(uri, str):
+        if isinstance(uri, string_types):
             return '{%s}%s' % (TNS, uri)
         if issubclass(uri, IndexedField):
             return '{%s}%s' % (TNS, uri.PARENT_ELEMENT_NAME)
@@ -598,7 +606,7 @@ class Item(EWSElement):
         fields = []
         for f in cls.fieldnames(with_extra=with_extra):
             field_uri = cls.fielduri_for_field(f)
-            if isinstance(field_uri, str):
+            if isinstance(field_uri, string_types):
                 fields.append(create_element('t:FieldURI', FieldURI=field_uri))
             elif issubclass(field_uri, IndexedField):
                 for l in field_uri.LABELS:
@@ -622,7 +630,19 @@ class Item(EWSElement):
         extended_properties = elem.findall(ExtendedProperty.response_tag())
         for fieldname in cls.fieldnames(with_extra=with_extra):
             field_type = cls.type_for_field(fieldname)
-            if field_type == EWSDateTime:
+            if isinstance(field_type, list):
+                list_type = field_type[0]
+                if isanysubclass(list_type, string_types):
+                    iter_elem = elem.find(cls.response_xml_elem_for_field(fieldname))
+                    if iter_elem is not None:
+                        kwargs[fieldname] = get_xml_attrs(iter_elem, '{%s}String' % TNS)
+                elif issubclass(list_type, EWSElement):
+                    iter_elem = elem.find(cls.response_xml_elem_for_field(fieldname))
+                    if iter_elem is not None:
+                        kwargs[fieldname] = [list_type.from_xml(e) for e in iter_elem.findall(list_type.response_tag())]
+                else:
+                    assert False, 'Field %s type %s not supported' % (fieldname, field_type)
+            elif field_type == EWSDateTime:
                 val = get_xml_attr(elem, cls.response_xml_elem_for_field(fieldname))
                 if val is not None:
                     kwargs[fieldname] = EWSDateTime.from_string(val)
@@ -630,7 +650,7 @@ class Item(EWSElement):
                 val = get_xml_attr(elem, cls.response_xml_elem_for_field(fieldname))
                 if val is not None:
                     kwargs[fieldname] = True if val == 'true' else False
-            elif field_type in (str, Choice, Email):
+            elif isanysubclass(field_type, string_types):
                 val = get_xml_attr(elem, cls.response_xml_elem_for_field(fieldname))
                 if val is not None:
                     kwargs[fieldname] = val
@@ -648,18 +668,6 @@ class Item(EWSElement):
                         kwargs[fieldname] = Decimal(val)
                     except ValueError:
                         pass
-            elif isinstance(field_type, list):
-                list_type = field_type[0]
-                if list_type == str:
-                    iter_elem = elem.find(cls.response_xml_elem_for_field(fieldname))
-                    if iter_elem is not None:
-                        kwargs[fieldname] = get_xml_attrs(iter_elem, '{%s}String' % TNS)
-                elif issubclass(list_type, EWSElement):
-                    iter_elem = elem.find(cls.response_xml_elem_for_field(fieldname))
-                    if iter_elem is not None:
-                        kwargs[fieldname] = [list_type.from_xml(e) for e in iter_elem.findall(list_type.response_tag())]
-                else:
-                    assert False, 'Field %s type %s not supported' % (fieldname, field_type)
             elif issubclass(field_type, ExtendedProperty):
                 kwargs[fieldname] = field_type.get_value(extended_properties)
             elif issubclass(field_type, EWSElement):
@@ -679,7 +687,7 @@ class Item(EWSElement):
             '%s=%s' % (k, repr(getattr(self, k))) for k in self.fieldnames()
         )
 
-
+@python_2_unicode_compatible
 class Folder:
     DISTINGUISHED_FOLDER_ID = None  # See https://msdn.microsoft.com/en-us/library/office/aa580808(v=exchg.150).aspx
     CONTAINER_CLASS = None  # See http://msdn.microsoft.com/en-us/library/hh354773(v=exchg.80).aspx
@@ -756,7 +764,7 @@ class Folder:
             q_args = []
             for arg in args:
                 # Convert all search expressions to q objects
-                if isinstance(arg, str):
+                if isinstance(arg, string_types):
                     q_args.append(Restriction.from_source(args[0], item_model=self.item_model).q)
                 else:
                     if not isinstance(arg, Q):
@@ -792,7 +800,7 @@ class Folder:
                         raise ValueError(
                             "Categories can only be filtered using 'categories__contains=['a', 'b', ...]' and "
                             "'categories__in=['a', 'b', ...]'")
-                    if isinstance(value, str):
+                    if isinstance(value, string_types):
                         kwargs_q &= Q(categories=value)
                     else:
                         children = [Q(categories=v) for v in value]
@@ -1024,7 +1032,7 @@ class Folder:
                 if fieldname == 'extern_id' and val is not None:
                     val = ExternId(val)
                 field_uri = self.attr_to_fielduri(fieldname)
-                if isinstance(field_uri, str):
+                if isinstance(field_uri, string_types):
                     fielduri = create_element('t:FieldURI', FieldURI=field_uri)
                 elif issubclass(field_uri, IndexedField):
                     log.warning("Skipping update on fieldname '%s' (not supported yet)", fieldname)
@@ -1146,7 +1154,7 @@ class ItemMixIn(Item):
             field_uri = self.fielduri_for_field(f)
             v = getattr(self, f)
             if v is not None:
-                if isinstance(field_uri, str):
+                if isinstance(field_uri, string_types):
                     i.append(set_xml_value(self.elem_for_field(f), v, version))
                 elif issubclass(field_uri, IndexedField):
                     i.append(set_xml_value(create_element('t:%s' % field_uri.PARENT_ELEMENT_NAME), v, version))
@@ -1164,7 +1172,7 @@ class ItemMixIn(Item):
     def fielduri_for_field(cls, fieldname):
         try:
             field_uri = cls.ITEM_FIELDS[fieldname][0]
-            if isinstance(field_uri, str):
+            if isinstance(field_uri, string_types):
                 return '%s:%s' % (cls.FIELDURI_PREFIX, field_uri)
             return field_uri
         except KeyError:
@@ -1172,7 +1180,7 @@ class ItemMixIn(Item):
 
     @classmethod
     def elem_for_field(cls, fieldname):
-        assert isinstance(fieldname, str)
+        assert isinstance(fieldname, string_types)
         try:
             return create_element('t:%s' % cls.uri_for_field(fieldname))
         except KeyError:
@@ -1184,7 +1192,7 @@ class ItemMixIn(Item):
             uri = cls.uri_for_field(fieldname)
         except KeyError:
             return Item.response_xml_elem_for_field(fieldname)
-        if isinstance(uri, str):
+        if isinstance(uri, string_types):
             return '{%s}%s' % (TNS, uri)
         if issubclass(uri, IndexedField):
             return '{%s}%s' % (TNS, uri.PARENT_ELEMENT_NAME)
@@ -1217,6 +1225,7 @@ class Root(Folder):
     DISTINGUISHED_FOLDER_ID = 'root'
 
 
+@python_2_unicode_compatible
 class CalendarItem(ItemMixIn):
     """
     Models a calendar item. Not all attributes are supported. See full list at
@@ -1233,7 +1242,7 @@ class CalendarItem(ItemMixIn):
     ITEM_FIELDS = {
         'start': ('Start', EWSDateTime),
         'end': ('End', EWSDateTime),
-        'location': ('Location', str),
+        'location': ('Location', string_type),
         'organizer': ('Organizer', Mailbox),
         'legacy_free_busy_status': ('LegacyFreeBusyStatus', Choice),
         'required_attendees': ('RequiredAttendees', [Attendee]),
@@ -1405,23 +1414,23 @@ class Task(ItemMixIn):
     ITEM_FIELDS = {
         'actual_work': ('ActualWork', int),
         'assigned_time': ('AssignedTime', EWSDateTime),
-        'billing_information': ('BillingInformation', str),
+        'billing_information': ('BillingInformation', string_type),
         'change_count': ('ChangeCount', int),
-        'companies': ('Companies', [str]),
-        'contacts': ('Contacts', [str]),
+        'companies': ('Companies', [string_type]),
+        'contacts': ('Contacts', [string_type]),
         'complete_date': ('CompleteDate', EWSDateTime),
         'is_complete': ('IsComplete', bool),
         'due_date': ('DueDate', EWSDateTime),
-        'delegator': ('Delegator', str),
+        'delegator': ('Delegator', string_type),
         'delegation_state': ('DelegationState', Choice),
         'is_recurring': ('IsRecurring', bool),
         'is_team_task': ('IsTeamTask', bool),
-        'mileage': ('Mileage', str),
-        'owner': ('Owner', str),
+        'mileage': ('Mileage', string_type),
+        'owner': ('Owner', string_type),
         'percent_complete': ('PercentComplete', Decimal),
         'start_date': ('StartDate', EWSDateTime),
         'status': ('Status', Choice),
-        'status_description': ('StatusDescription', str),
+        'status_description': ('StatusDescription', string_type),
         'total_work': ('TotalWork', int),
     }
     REQUIRED_FIELDS = {'subject', 'status'}
@@ -1509,32 +1518,32 @@ class Contact(ItemMixIn):
     }
     # TODO: This list is incomplete
     ITEM_FIELDS = {
-        'file_as': ('FileAs', str),
+        'file_as': ('FileAs', string_type),
         'file_as_mapping': ('FileAsMapping', Choice),
-        'display_name': ('DisplayName', str),
-        'given_name': ('GivenName', str),
-        'initials': ('Initials', str),
-        'middle_name': ('MiddleName', str),
-        'nickname': ('Nickname', str),
-        'company_name': ('CompanyName', str),
+        'display_name': ('DisplayName', string_type),
+        'given_name': ('GivenName', string_type),
+        'initials': ('Initials', string_type),
+        'middle_name': ('MiddleName', string_type),
+        'nickname': ('Nickname', string_type),
+        'company_name': ('CompanyName', string_type),
         'email_addresses': (EmailAddress, [EmailAddress]),
         # 'physical_addresses': (PhysicalAddress, [PhysicalAddress]),
         'phone_numbers': (PhoneNumber, [PhoneNumber]),
-        'assistant_name': ('AssistantName', str),
+        'assistant_name': ('AssistantName', string_type),
         'birthday': ('Birthday', EWSDateTime),
-        'business_homepage': ('BusinessHomePage', str),
-        'companies': ('Companies', [str]),
-        'department': ('Department', str),
-        'generation': ('Generation', str),
+        'business_homepage': ('BusinessHomePage', string_type),
+        'companies': ('Companies', [string_type]),
+        'department': ('Department', string_type),
+        'generation': ('Generation', string_type),
         # 'im_addresses': ('ImAddresses', [ImAddress]),
-        'job_title': ('JobTitle', str),
-        'manager': ('Manager', str),
-        'mileage': ('Mileage', str),
-        'office': ('OfficeLocation', str),
-        'profession': ('Profession', str),
-        'surname': ('Surname', str),
+        'job_title': ('JobTitle', string_type),
+        'manager': ('Manager', string_type),
+        'mileage': ('Mileage', string_type),
+        'office': ('OfficeLocation', string_type),
+        'profession': ('Profession', string_type),
+        'surname': ('Surname', string_type),
         # 'email_alias': ('Alias', Email),
-        # 'notes': ('Notes', str),  # Only available from Exchange 2010 SP2
+        # 'notes': ('Notes', string_type),  # Only available from Exchange 2010 SP2
     }
     REQUIRED_FIELDS = {'display_name'}
     ORDERED_FIELDS = (
