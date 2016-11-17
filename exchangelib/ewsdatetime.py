@@ -121,6 +121,7 @@ class EWSTimeZone(object):
         'US/Pacific': 'Pacific Standard Time',
         'US/Eastern': 'Eastern Standard Time',
         'Europe/Copenhagen': 'Romance Standard Time',
+        'Europe/Paris': 'Romance Standard Time',
     }
 
     # This is a somewhat authoritative list of the timezones available on an Exchange server. Format is (id, name).

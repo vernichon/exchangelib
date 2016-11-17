@@ -191,7 +191,7 @@ class DummyResponse:
 
 def get_domain(email):
     try:
-        return email.split('@')[1].lower().strip()
+        return str(email.split('@')[1].lower().strip())
     except (IndexError, AttributeError) as e:
         raise_from(ValueError("'%s' is not a valid email" % email), e)
 

@@ -263,7 +263,7 @@ class Version(object):
         log.debug('Response data: %s', r.text)
         try:
             header = to_xml(r.text, encoding=r.encoding).find('{%s}Header' % SOAPNS)
-            if not header:
+            if header is None:
                 raise ParseError()
         except ParseError as e:
             raise_from(EWSWarning('Unknown XML response from %s (response: %s)' % (protocol.service_endpoint, r.text)), e)
@@ -279,7 +279,7 @@ class Version(object):
     def from_response(cls, requested_api_version, response):
         try:
             header = to_xml(response.text, encoding=response.encoding).find('{%s}Header' % SOAPNS)
-            if not header:
+            if header is None:
                 raise ParseError()
         except ParseError as e:
             raise_from(EWSWarning('Unknown XML response from %s (response: %s)' % (response, response.text)), e)

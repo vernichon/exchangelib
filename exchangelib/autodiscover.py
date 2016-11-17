@@ -94,7 +94,7 @@ class AutodiscoverCache:
     def __contains__(self, key):
         domain, credentials, verify_ssl = key
         with shelve_open(self._storage_file) as db:
-            return domain in db
+            return str(domain) in db
 
     def __getitem__(self, key):
         protocol = self._protocols.get(key)
